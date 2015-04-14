@@ -1,0 +1,15 @@
+D:\users\lumenignis\documents\visual studio 2012\Projects\Turnover\Turnover\bin\Release\Turnover.exe
+D:\users\lumenignis\documents\visual studio 2012\Projects\Turnover\Turnover\bin\Release\Turnover.exe.config
+D:\users\lumenignis\documents\visual studio 2012\Projects\Turnover\Turnover\bin\Release\Turnover.pdb
+D:\users\lumenignis\documents\visual studio 2012\Projects\Turnover\Turnover\bin\Release\Json.dll
+D:\users\lumenignis\documents\visual studio 2012\Projects\Turnover\Turnover\bin\Release\Newtonsoft.Json.dll
+D:\users\lumenignis\documents\visual studio 2012\Projects\Turnover\Turnover\bin\Release\System.IdentityModel.Tokens.Jwt.dll
+D:\users\lumenignis\documents\visual studio 2012\Projects\Turnover\Turnover\bin\Release\Json.pdb
+D:\users\lumenignis\documents\visual studio 2012\Projects\Turnover\Turnover\bin\Release\Newtonsoft.Json.xml
+D:\users\lumenignis\documents\visual studio 2012\Projects\Turnover\Turnover\bin\Release\System.IdentityModel.Tokens.Jwt.xml
+D:\users\lumenignis\documents\visual studio 2012\Projects\Turnover\Turnover\obj\Release\Turnover.mainForm.resources
+D:\users\lumenignis\documents\visual studio 2012\Projects\Turnover\Turnover\obj\Release\Turnover.PrivateForm.resources
+D:\users\lumenignis\documents\visual studio 2012\Projects\Turnover\Turnover\obj\Release\Turnover.Properties.Resources.resources
+D:\users\lumenignis\documents\visual studio 2012\Projects\Turnover\Turnover\obj\Release\Turnover.csproj.GenerateResource.Cache
+D:\users\lumenignis\documents\visual studio 2012\Projects\Turnover\Turnover\obj\Release\Turnover.exe
+D:\users\lumenignis\documents\visual studio 2012\Projects\Turnover\Turnover\obj\Release\Turnover.pdb
