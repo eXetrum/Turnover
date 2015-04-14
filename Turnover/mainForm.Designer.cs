@@ -32,8 +32,6 @@ namespace Turnover
             this.components = new System.ComponentModel.Container();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(mainForm));
             this.chatBox = new System.Windows.Forms.TextBox();
-            this.btn_scan = new System.Windows.Forms.Button();
-            this.progressBar1 = new System.Windows.Forms.ProgressBar();
             this.usersOnline = new System.Windows.Forms.ListView();
             this.userIP = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.userNickName = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
@@ -53,23 +51,6 @@ namespace Turnover
             this.chatBox.ScrollBars = System.Windows.Forms.ScrollBars.Both;
             this.chatBox.Size = new System.Drawing.Size(555, 375);
             this.chatBox.TabIndex = 0;
-            // 
-            // btn_scan
-            // 
-            this.btn_scan.Location = new System.Drawing.Point(326, 12);
-            this.btn_scan.Name = "btn_scan";
-            this.btn_scan.Size = new System.Drawing.Size(75, 23);
-            this.btn_scan.TabIndex = 1;
-            this.btn_scan.Text = "Scan";
-            this.btn_scan.UseVisualStyleBackColor = true;
-            this.btn_scan.Click += new System.EventHandler(this.btn_scan_Click);
-            // 
-            // progressBar1
-            // 
-            this.progressBar1.Location = new System.Drawing.Point(407, 12);
-            this.progressBar1.Name = "progressBar1";
-            this.progressBar1.Size = new System.Drawing.Size(113, 23);
-            this.progressBar1.TabIndex = 2;
             // 
             // usersOnline
             // 
@@ -154,8 +135,6 @@ namespace Turnover
             this.Controls.Add(this.btn_send);
             this.Controls.Add(this.msgBox);
             this.Controls.Add(this.usersOnline);
-            this.Controls.Add(this.progressBar1);
-            this.Controls.Add(this.btn_scan);
             this.Controls.Add(this.chatBox);
             this.Name = "mainForm";
             this.Text = "Turnover";
@@ -168,8 +147,6 @@ namespace Turnover
         #endregion
 
         private System.Windows.Forms.TextBox chatBox;
-        private System.Windows.Forms.Button btn_scan;
-        private System.Windows.Forms.ProgressBar progressBar1;
         private System.Windows.Forms.ListView usersOnline;
         private TextBox msgBox;
         private TextBox nickNameBox;

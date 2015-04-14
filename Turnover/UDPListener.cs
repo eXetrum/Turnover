@@ -20,7 +20,6 @@ namespace Turnover
 
         Form form;
 
-        bool online = true;
         public UDPListener(int broadcastPort, int privatePort, 
             string nickName, Form form, TextBox logTextBox, ListView usersListView)
             : base(broadcastPort)
@@ -447,8 +446,7 @@ namespace Turnover
                     dataRecived = dataRecived.Remove(0, "USER_ONLINE:".Length);
 
                     User temp = User.Deserialize(dataRecived);
-                    if (temp.nickName == "test")
-                        online = false;
+
                     //Log(temp.nickName);
                     User alreadyInList = usersOnline.Find(x => x.ipAddress.Equals(groupEP.Address.ToString()));
                     if (alreadyInList == null)

@@ -3,18 +3,26 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
 using System.Drawing;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using System.Net;
+using System.Net.Sockets;
 
 namespace Turnover
 {
     public partial class mainForm : Form
     {
-        UDPListener listener = null;
+        
+        Client client = null;
+
+
         string textBefore = string.Empty;
+        GlobalServer globalServer = null;
+        PMServer privateServer = null;
 
         public mainForm()
         {
@@ -23,14 +31,15 @@ namespace Turnover
             {
                 nickNameBox.Text = Properties.Settings.Default.NickName;
 
-                listener = new UDPListener(Properties.Settings.Default.BroadcastPort,
-                    Properties.Settings.Default.PrivatePort,
-                    Properties.Settings.Default.NickName,
-                    this,
-                    chatBox, 
-                    usersOnline);
+                globalServer = new GlobalServer();
+                globalServer.Received += new GlobalServer.ClientReceivedHandler(globalServer_Received);
+                globalServer.ClientStatusOnline += new GlobalServer.ClientStatusOnlineChangedHandle(globalServer_ClientStatusOnline);
+                globalServer.ClientStatusOffline += new GlobalServer.ClientStatusOfflineChangedHandle(globalServer_ClientStatusOffline);
+                globalServer.Listen();
 
-                listener.StartListen();
+                privateServer = new PMServer();
+                privateServer.Accepted += new PMServer.SocketAcceptedHandler(server_Accepted);
+                privateServer.Start(Properties.Settings.Default.privatePort);
             }
             catch (Exception ex)
             {
@@ -40,21 +49,148 @@ namespace Turnover
                                 "Error Turnover", MessageBoxButtons.OK,
                                 MessageBoxIcon.Error);
             }
-
-
-            //usersOnline.LargeImageList = userIcons;
-            usersOnline.View = View.Details;
-            usersOnline.StateImageList = userIcons;
         }
 
-        private void btn_scan_Click(object sender, EventArgs e)
+        #region "Global Server Events"
+        void globalServer_Received(IPEndPoint ep, Packet p)
         {
-            listener.SendInvites();
+            Invoke((MethodInvoker)delegate
+            {
+                string formatted_data = string.Format("[{0}][{1}] ", ep.ToString(), p.NickName) + Packet.encoding.GetString(p.data);
+                chatBox.AppendText(formatted_data + Environment.NewLine);
+            });
+        }
+
+        void globalServer_ClientStatusOnline(IPEndPoint ep, Packet p)
+        {
+            Invoke((MethodInvoker)delegate
+            {
+                for (int i = 0; i < usersOnline.Items.Count; ++i)
+                {
+                    IPEndPoint itemEP = usersOnline.Items[i].Tag as IPEndPoint;
+
+                    if (itemEP.Equals(ep))
+                    {
+                        usersOnline.Items[i].SubItems[1].Text = p.NickName;
+                        return;
+                    }
+                }
+
+                ListViewItem lvi = new ListViewItem();
+                lvi.Text = ep.ToString();
+                lvi.ImageIndex = 0;
+                lvi.Tag = ep;
+                lvi.SubItems.Add(p.NickName);
+                usersOnline.Items.Add(lvi);
+            });            
+        }
+
+        void globalServer_ClientStatusOffline(IPEndPoint sender)
+        {
+            Invoke((MethodInvoker)delegate
+            {
+                for (int i = 0; i < usersOnline.Items.Count; ++i)
+                {
+                    IPEndPoint ep = usersOnline.Items[i].Tag as IPEndPoint; 
+
+                    if (ep.Equals(sender))
+                    {
+                        usersOnline.Items.RemoveAt(i);
+                        break;
+                    }
+                }
+            });
+        }
+        #endregion
+
+        void server_Accepted(Socket e)
+        {
+            if (client != null)
+            {
+                e.Close();
+                return;
+            }
+            client = new Client(e);
+            client.DataReceived += new Client.DataReceivedEventHandler(client_DataReceived);
+            client.Disconnected += new Client.DisconnectedEventHandler(client_Disconnected);
+            client.ReceiveAsync();
+
+            Invoke((MethodInvoker)delegate
+            {
+                chatBox.AppendText("Connected: " + client.EndPoint.ToString() + Environment.NewLine);
+            });
+
+        }
+
+        
+
+        void client_DataReceived(Client sender, ReceiveBuffer e)
+        {
+            BinaryReader br = new BinaryReader(e.BufferStream);
+
+            string s = br.ReadString();
+            Invoke((MethodInvoker)delegate
+            {
+                chatBox.AppendText(s + Environment.NewLine);
+            });
+            /*
+
+            Commands header = (Commands)br.ReadInt32();
+
+            switch (header)
+            {
+                case Commands.String:
+                    {
+                        string s = br.ReadString();
+                        Invoke((MethodInvoker)delegate
+                        {
+                            chatBox.AppendText(s + Environment.NewLine);
+                        });
+                    }
+                    break;
+                case Commands.File:
+                    {
+                        int fileSize = br.ReadInt32();
+
+                        byte[] fileBytes = br.ReadBytes(fileBytes);
+
+                        StreamWriter sw = new StreamWriter()
+
+                    }
+                    break;
+                default:
+                    break;
+            }
+            */
+
+        }
+
+        void client_Disconnected(Client sender)
+        {
+            client.Close();
+            client = null;
+
+            Invoke((MethodInvoker)delegate
+            {
+                chatBox.AppendText("Connected: NULL" + Environment.NewLine);
+            });
         }
 
         private void mainForm_FormClosed(object sender, FormClosedEventArgs e)
         {
-            listener.StopListener();
+            globalServer.StopGlobalListener();
+            privateServer.Stop();
+        }
+
+        private void usersOnline_DoubleClick(object sender, EventArgs e)
+        {
+            ListView listView = (sender as ListView);
+            if (listView.SelectedItems.Count == 1)
+            {//display the text of selected item
+
+                MessageBox.Show(listView.SelectedItems[0].Text);
+
+            }
         }
 
         private void usersOnline_SelectedIndexChanged(object sender, EventArgs e)
@@ -69,7 +205,11 @@ namespace Turnover
         {
             string message = msgBox.Text;
             msgBox.Clear();
-            listener.SendMessage(message);
+            msgBox.Focus();
+            Packet packet = new Packet(MSG_TYPE.MESSAGE, Packet.encoding.GetBytes(message),
+                Properties.Settings.Default.NickName, null);
+
+            globalServer.SendMessage(packet);
         }
 
         private void msgBox_TextChanged(object sender, EventArgs e)
@@ -77,6 +217,15 @@ namespace Turnover
             btn_send.Enabled = msgBox.Text.Length > 0;
         }
 
+        private void msgBox_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Enter)
+            {
+                e.Handled = true;
+                e.SuppressKeyPress = true;
+                btn_send.PerformClick();
+            }
+        }
 
         private void nickNameBox_Enter(object sender, EventArgs e)
         {
@@ -98,25 +247,16 @@ namespace Turnover
 
             KeyEventArgs keyArgs = e as KeyEventArgs;
 
-            if (box.Text.CompareTo(textBefore) != 0 && box.Text.Length > 0)
-            {
-                if(keyArgs != null)
-                    if (keyArgs.KeyCode == Keys.Enter)
-                    {
-                        listener.user.nickName = box.Text;
-                        Properties.Settings.Default.NickName = box.Text;
-                        Properties.Settings.Default.Save();
-                    }
-                    else
-                        box.Text = textBefore;
-            }
-            else
+            if (box.Text.Length == 0 || (keyArgs != null && keyArgs.KeyCode == Keys.Escape))
             {
                 box.Text = textBefore;
             }
-            
+            else
+            {
+                Properties.Settings.Default.NickName = box.Text;
+                Properties.Settings.Default.Save();
+            }
             msgBox.Focus();
-
         }        
 
         private void nickNameBox_KeyDown(object sender, KeyEventArgs e)
@@ -125,33 +265,10 @@ namespace Turnover
 
             if (box.Focused && (e.KeyCode == Keys.Escape || e.KeyCode == Keys.Enter))
             {
-                
                 nickNameBox_Leave(box, e);
                 e.Handled = true;
             }
         }
-
-        private void usersOnline_DoubleClick(object sender, EventArgs e)
-        {
-            ListView listView = (sender as ListView);
-            if (listView.SelectedItems.Count == 1)
-            {//display the text of selected item
-
-                MessageBox.Show(listView.SelectedItems[0].Text);
-
-            }
-        }
-
-        private void msgBox_KeyDown(object sender, KeyEventArgs e)
-        {
-            if (e.KeyCode == Keys.Enter)
-            {
-                e.Handled = true;
-                e.SuppressKeyPress = true;
-                btn_send.PerformClick();
-            }
-        }
-
         
     }
 }

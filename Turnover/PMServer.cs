@@ -8,7 +8,7 @@ using System.Net.Sockets;
 
 namespace Turnover
 {
-    class Server
+    class PMServer
     {
         public delegate void SocketAcceptedHandler(Socket e);
         public event SocketAcceptedHandler Accepted;
@@ -17,7 +17,7 @@ namespace Turnover
         public int Port;
 
         public bool Running { get; private set; }
-        public Server() { Port = 0; }
+        public PMServer() { Port = 0; }
         public void Start(int port)
         {
             if (Running) return;
@@ -35,8 +35,6 @@ namespace Turnover
             if (!Running) return;
 
             serverSocket.Close();
-            serverSocket.Shutdown(SocketShutdown.Both);
-            serverSocket.Close();
 
             Running = false;
         }
@@ -46,7 +44,6 @@ namespace Turnover
             try
             {
                 Socket s = serverSocket.EndAccept(ar);
-
                 if(Accepted != null)
                     Accepted(s);
             }

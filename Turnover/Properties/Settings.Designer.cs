@@ -25,30 +25,6 @@ namespace Turnover.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("11000")]
-        public int BroadcastPort {
-            get {
-                return ((int)(this["BroadcastPort"]));
-            }
-            set {
-                this["BroadcastPort"] = value;
-            }
-        }
-        
-        [global::System.Configuration.UserScopedSettingAttribute()]
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("11001")]
-        public int PrivatePort {
-            get {
-                return ((int)(this["PrivatePort"]));
-            }
-            set {
-                this["PrivatePort"] = value;
-            }
-        }
-        
-        [global::System.Configuration.UserScopedSettingAttribute()]
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("NickName")]
         public string NickName {
             get {
@@ -56,6 +32,54 @@ namespace Turnover.Properties {
             }
             set {
                 this["NickName"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("239.0.0.222")]
+        public string multicastGroup {
+            get {
+                return ((string)(this["multicastGroup"]));
+            }
+            set {
+                this["multicastGroup"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("11000")]
+        public int multicastPort {
+            get {
+                return ((int)(this["multicastPort"]));
+            }
+            set {
+                this["multicastPort"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("11001")]
+        public int privatePort {
+            get {
+                return ((int)(this["privatePort"]));
+            }
+            set {
+                this["privatePort"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("secret_key")]
+        public string SECRET_KEY {
+            get {
+                return ((string)(this["SECRET_KEY"]));
+            }
+            set {
+                this["SECRET_KEY"] = value;
             }
         }
     }

@@ -2,14 +2,20 @@
 <SettingsFile xmlns="http://schemas.microsoft.com/VisualStudio/2004/01/settings" CurrentProfile="(Default)" GeneratedClassNamespace="Turnover.Properties" GeneratedClassName="Settings">
   <Profiles />
   <Settings>
-    <Setting Name="BroadcastPort" Type="System.Int32" Scope="User">
-      <Value Profile="(Default)">11000</Value>
-    </Setting>
-    <Setting Name="PrivatePort" Type="System.Int32" Scope="User">
-      <Value Profile="(Default)">11001</Value>
-    </Setting>
     <Setting Name="NickName" Type="System.String" Scope="User">
       <Value Profile="(Default)">NickName</Value>
+    </Setting>
+    <Setting Name="multicastGroup" Type="System.String" Scope="User">
+      <Value Profile="(Default)">239.0.0.222</Value>
+    </Setting>
+    <Setting Name="multicastPort" Type="System.Int32" Scope="User">
+      <Value Profile="(Default)">11000</Value>
+    </Setting>
+    <Setting Name="privatePort" Type="System.Int32" Scope="User">
+      <Value Profile="(Default)">11001</Value>
+    </Setting>
+    <Setting Name="SECRET_KEY" Type="System.String" Scope="User">
+      <Value Profile="(Default)">secret_key</Value>
     </Setting>
   </Settings>
 </SettingsFile>

@@ -80,7 +80,8 @@ namespace Turnover
         {
             if (socket != null)
             {
-                socket.Disconnect(false);
+                socket.Shutdown(SocketShutdown.Both);
+                //socket.Disconnect(false);
                 socket.Close();
             }
 
