@@ -7,10 +7,3 @@ D:\users\lumenignis\documents\visual studio 2012\Projects\Turnover\Turnover\obj\
 D:\users\lumenignis\documents\visual studio 2012\Projects\Turnover\Turnover\obj\Debug\Turnover.csproj.GenerateResource.Cache
 D:\users\lumenignis\documents\visual studio 2012\Projects\Turnover\Turnover\obj\Debug\Turnover.exe
 D:\users\lumenignis\documents\visual studio 2012\Projects\Turnover\Turnover\obj\Debug\Turnover.pdb
-D:\users\lumenignis\documents\visual studio 2012\Projects\Turnover\Turnover\bin\Debug\Json.dll
-D:\users\lumenignis\documents\visual studio 2012\Projects\Turnover\Turnover\bin\Debug\Newtonsoft.Json.dll
-D:\users\lumenignis\documents\visual studio 2012\Projects\Turnover\Turnover\bin\Debug\System.IdentityModel.Tokens.Jwt.dll
-D:\users\lumenignis\documents\visual studio 2012\Projects\Turnover\Turnover\bin\Debug\Json.pdb
-D:\users\lumenignis\documents\visual studio 2012\Projects\Turnover\Turnover\bin\Debug\Newtonsoft.Json.xml
-D:\users\lumenignis\documents\visual studio 2012\Projects\Turnover\Turnover\bin\Debug\System.IdentityModel.Tokens.Jwt.xml
-D:\users\lumenignis\documents\visual studio 2012\Projects\Turnover\Turnover\obj\Debug\Turnover.PrivateChat.resources

@@ -15,14 +15,12 @@ namespace Turnover
 {
     class GlobalServer
     {
-        
 
         public class UdpData
         {
             public UdpClient workUDPclient = null;
             public IPEndPoint ipEndPoint = null;
         }
-
 
         public GlobalServer()
         {

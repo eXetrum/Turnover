@@ -16,13 +16,11 @@ namespace Turnover
 {
     public partial class mainForm : Form
     {
-        
-        Client client = null;
-
-
         string textBefore = string.Empty;
         GlobalServer globalServer = null;
         PMServer privateServer = null;
+
+        List<Client> clients = new List<Client>();
 
         public mainForm()
         {
@@ -72,6 +70,7 @@ namespace Turnover
                     if (itemEP.Equals(ep))
                     {
                         usersOnline.Items[i].SubItems[1].Text = p.NickName;
+                        usersOnline.Items[i].SubItems[2].Text = (p.privateIPEndPoint == null) ? "null" : p.privateIPEndPoint.ToString();
                         return;
                     }
                 }
@@ -81,6 +80,7 @@ namespace Turnover
                 lvi.ImageIndex = 0;
                 lvi.Tag = ep;
                 lvi.SubItems.Add(p.NickName);
+                lvi.SubItems.Add((p.privateIPEndPoint == null) ? "null" : p.privateIPEndPoint.ToString());
                 usersOnline.Items.Add(lvi);
             });            
         }
@@ -105,76 +105,49 @@ namespace Turnover
 
         void server_Accepted(Socket e)
         {
-            if (client != null)
-            {
-                e.Close();
-                return;
-            }
-            client = new Client(e);
-            client.DataReceived += new Client.DataReceivedEventHandler(client_DataReceived);
-            client.Disconnected += new Client.DisconnectedEventHandler(client_Disconnected);
-            client.ReceiveAsync();
+            Client client = new Client(e);
+            client.Received += client_DataReceived;
+            client.Disconnected += client_Disconnected;
 
             Invoke((MethodInvoker)delegate
             {
-                chatBox.AppendText("Connected: " + client.EndPoint.ToString() + Environment.NewLine);
+                TabPage page = new TabPage(client.EndPoint.ToString());
+                page.Name = client.EndPoint.ToString();
+                TextBox privateBox = new TextBox();
+
+                privateBox.Name = client.EndPoint.ToString();
+                privateBox.Multiline = true;
+                privateBox.ReadOnly = true;
+                privateBox.BackColor = Color.White;
+                privateBox.Location = new Point(6, 7);
+                privateBox.ScrollBars = ScrollBars.Vertical;
+                privateBox.Size = new System.Drawing.Size(555, 365);
+                page.Controls.Add(privateBox);
+
+                chatTabs.TabPages.Add(page);
+                privateBox.AppendText("Connected: " + client.EndPoint.ToString() + Environment.NewLine);
             });
 
         }
 
-        
-
-        void client_DataReceived(Client sender, ReceiveBuffer e)
+        void client_DataReceived(Client sender, byte []data)
         {
-            BinaryReader br = new BinaryReader(e.BufferStream);
-
-            string s = br.ReadString();
             Invoke((MethodInvoker)delegate
             {
-                chatBox.AppendText(s + Environment.NewLine);
+                TabPage page = chatTabs.TabPages[sender.EndPoint.ToString()];
+                TextBox privateBox = page.Controls[sender.EndPoint.ToString()] as TextBox;
+                privateBox.AppendText(Client.encoding.GetString(data) + Environment.NewLine);
             });
-            /*
-
-            Commands header = (Commands)br.ReadInt32();
-
-            switch (header)
-            {
-                case Commands.String:
-                    {
-                        string s = br.ReadString();
-                        Invoke((MethodInvoker)delegate
-                        {
-                            chatBox.AppendText(s + Environment.NewLine);
-                        });
-                    }
-                    break;
-                case Commands.File:
-                    {
-                        int fileSize = br.ReadInt32();
-
-                        byte[] fileBytes = br.ReadBytes(fileBytes);
-
-                        StreamWriter sw = new StreamWriter()
-
-                    }
-                    break;
-                default:
-                    break;
-            }
-            */
-
         }
 
         void client_Disconnected(Client sender)
         {
-            client.Close();
-            client = null;
-
-            Invoke((MethodInvoker)delegate
-            {
-                chatBox.AppendText("Connected: NULL" + Environment.NewLine);
-            });
+            MessageBox.Show("Disconnected");
         }
+
+        
+
+        
 
         private void mainForm_FormClosed(object sender, FormClosedEventArgs e)
         {
@@ -212,6 +185,7 @@ namespace Turnover
             globalServer.SendMessage(packet);
         }
 
+        #region MessageBox, NicknameBox
         private void msgBox_TextChanged(object sender, EventArgs e)
         {
             btn_send.Enabled = msgBox.Text.Length > 0;
@@ -269,6 +243,6 @@ namespace Turnover
                 e.Handled = true;
             }
         }
-        
+        #endregion
     }
 }
