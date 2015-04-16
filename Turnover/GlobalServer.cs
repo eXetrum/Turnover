@@ -31,38 +31,76 @@ namespace Turnover
             udpclient = new UdpClient();
             udpclient.JoinMulticastGroup(multicastAddress);
             remoteEP = new IPEndPoint(multicastAddress, multicastPort);
-            
+            ////////////////////////////////////////////////////////////////
+            privatePort = Properties.Settings.Default.privatePort;
+
+            privateListener = new TcpListener(new IPEndPoint(IPAddress.Any, privatePort));
+
+
+            /*var port = ((IPEndPoint)privateListener.LocalEndpoint).Port;
+            privatePort = port;*/
+
+            privateListener.Start(0);
+
+            privateListener.BeginAcceptSocket(acceptedPMCallback, null);
+
+            ////////////////////////////////////////////////////////////////
             // Разослать приглашения
             inviteThread = new Thread(Inviter);
             inviteThread.IsBackground = true;
             inviteThread.Start();
 
         }
+        TcpListener privateListener;
+
+
+        public delegate void SocketAcceptedHandler(Socket e);
+        public event SocketAcceptedHandler AcceptedPM;
+
+        private void acceptedPMCallback(IAsyncResult ar)
+        {
+            Socket s = privateListener.EndAcceptSocket(ar);
+            if (AcceptedPM != null)
+                AcceptedPM(s);
+            privateListener.BeginAcceptSocket(new AsyncCallback(acceptedPMCallback), null);
+        }
 
         private UdpClient udpclient;
         private IPAddress multicastAddress;
         private int multicastPort;
-        private IPEndPoint remoteEP;        
+        private IPEndPoint remoteEP;
+        private int privatePort;
 
         private Thread inviteThread = null;
 
-        public void SendMessage(Packet packet)
+        public void SendMulticastMessage(Packet packet)
         {
-            Byte[] encrypted = Encrypt(Packet.ObjectToByteArray(packet));
+            Byte[] encrypted = Packet.Encrypt(Packet.ObjectToByteArray(packet));
             udpclient.Send(encrypted, encrypted.Length, remoteEP);
+            MessageBox.Show(remoteEP.ToString());
         }
+
+        public void SendPrivateMessage(Socket remote, Packet packet)
+        {
+            Byte[] encrypted = Packet.Encrypt(Packet.ObjectToByteArray(packet));
+            remote.Send(encrypted);
+        }
+
+
         ManualResetEvent inviteEvent = new ManualResetEvent(false);
         private void Inviter(object sender)
         {
             do
             {
-                Packet invitePacket = new Packet(MSG_TYPE.STATUS_ONLINE, null, Properties.Settings.Default.NickName, null);
-                SendMessage(invitePacket);
+                Packet invitePacket = new Packet(MSG_TYPE.STATUS_ONLINE, null,
+                    Properties.Settings.Default.NickName,
+                    privatePort);
+                SendMulticastMessage(invitePacket);
 
             } while (!inviteEvent.WaitOne(2000));
             // Рассылаем прощание
-            Packet endPacket = new Packet(MSG_TYPE.STATUS_OFFLINE, null, Properties.Settings.Default.NickName, null);
-            SendMessage(endPacket);
+            Packet endPacket = new Packet(MSG_TYPE.STATUS_OFFLINE, null, Properties.Settings.Default.NickName, privatePort);
+            SendMulticastMessage(endPacket);
         }
 
         public void StopGlobalListener()
@@ -72,6 +110,8 @@ namespace Turnover
 
             udpclient.DropMulticastGroup(multicastAddress);
             udpclient.Close();
+
+            privateListener.Stop();
         }
 
 
@@ -99,11 +139,11 @@ namespace Turnover
             client.BeginReceive(new AsyncCallback(receiveCallback), udpData);            
         }
 
-        public delegate void ClientReceivedHandler(IPEndPoint ep, Packet p);
-        public delegate void ClientStatusOnlineChangedHandle(IPEndPoint ep, Packet p);
-        public delegate void ClientStatusOfflineChangedHandle(IPEndPoint ep);
+        public delegate void ClientReceivedMulticastHandler(Packet p);
+        public delegate void ClientStatusOnlineChangedHandle(Packet p);
+        public delegate void ClientStatusOfflineChangedHandle(Packet p);
 
-        public event ClientReceivedHandler Received;        
+        public event ClientReceivedMulticastHandler ReceivedMulticast;        
         public event ClientStatusOnlineChangedHandle ClientStatusOnline;        
         public event ClientStatusOfflineChangedHandle ClientStatusOffline;
         
@@ -116,28 +156,29 @@ namespace Turnover
 
 
             byte[] receivedBytes = client.EndReceive(ar, ref ep);
-            byte[] decryptedBytes = Decrypt(receivedBytes);
+            byte[] decryptedBytes = Packet.Decrypt(receivedBytes);
 
             Packet receivedPacket = (Packet)Packet.ByteArrayToObject(decryptedBytes);
-
+            receivedPacket.from = ep;
+            
             switch (receivedPacket.msgType)
             {
                 case MSG_TYPE.STATUS_ONLINE:
                     {
                         if (ClientStatusOnline != null)
-                            ClientStatusOnline(ep, receivedPacket);
+                            ClientStatusOnline(receivedPacket);
                     }
                     break;
                 case MSG_TYPE.STATUS_OFFLINE:
                     {
                         if (ClientStatusOffline != null)
-                            ClientStatusOffline(ep);
+                            ClientStatusOffline(receivedPacket);
                     }
                     break;
                 case MSG_TYPE.MESSAGE:
                     {
-                        if (Received != null)
-                            Received(ep, receivedPacket);
+                        if (ReceivedMulticast != null)
+                            ReceivedMulticast(receivedPacket);
                     }
                     break;
                 case MSG_TYPE.FILE:
@@ -148,58 +189,10 @@ namespace Turnover
                     break;
             }
 
+
             client.BeginReceive(new AsyncCallback(receiveCallback), udpData);
         }
 
-        #region Encrypt/Decrypt
-        private byte[] Encrypt(byte[] clearBytes, string EncryptionKey = "123")
-        {
-            ///
-            EncryptionKey = Properties.Settings.Default.SECRET_KEY;
-            ///
-            
-            byte[] encrypted;
-            using (Aes encryptor = Aes.Create())
-            {
-                Rfc2898DeriveBytes pdb = new Rfc2898DeriveBytes(EncryptionKey, new byte[] { 0x49, 0x76, 0x61, 0x6e, 0x20, 0x4d, 0x65, 0x64, 0x76, 0x65, 0x64, 0x65, 0x76 }); // еще один плюс шарпа в наличие таких вот костылей.
-                encryptor.Key = pdb.GetBytes(32);
-                encryptor.IV = pdb.GetBytes(16);
-                using (MemoryStream ms = new MemoryStream())
-                {
-                    using (CryptoStream cs = new CryptoStream(ms, encryptor.CreateEncryptor(), CryptoStreamMode.Write))
-                    {
-                        cs.Write(clearBytes, 0, clearBytes.Length);
-                        cs.Close();
-                    }
-                    encrypted = ms.ToArray();
-                }
-            }
-            return encrypted;
-        }
-
-        private byte[] Decrypt(byte[] cipherBytes, string EncryptionKey = "123")
-        {
-            ///
-            EncryptionKey = Properties.Settings.Default.SECRET_KEY;
-            ///
-            byte[] decryptedBytes = null;
-            using (Aes encryptor = Aes.Create())
-            {
-                Rfc2898DeriveBytes pdb = new Rfc2898DeriveBytes(EncryptionKey, new byte[] { 0x49, 0x76, 0x61, 0x6e, 0x20, 0x4d, 0x65, 0x64, 0x76, 0x65, 0x64, 0x65, 0x76 });
-                encryptor.Key = pdb.GetBytes(32);
-                encryptor.IV = pdb.GetBytes(16);
-                using (MemoryStream ms = new MemoryStream())
-                {
-                    using (CryptoStream cs = new CryptoStream(ms, encryptor.CreateDecryptor(), CryptoStreamMode.Write))
-                    {
-                        cs.Write(cipherBytes, 0, cipherBytes.Length);
-                        cs.Close();
-                    }
-                    decryptedBytes = ms.ToArray();
-                }
-            }
-            return decryptedBytes;
-        }
-        #endregion
+        
     }
 }
