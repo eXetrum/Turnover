@@ -17,22 +17,13 @@ namespace Turnover
 {
     public partial class mainForm : Form
     {
+        
+
         string textBefore = string.Empty;
         GlobalServer globalServer = null;
 
-        public class UserInfo
-        {
-            // Исходящее соединение
-            public Socket remoteSocket { get; set; }
-            // Входящее соединение
-            public Client acceptedClient { get; set; }
-            // Последний "инфо" пакет
-            public Packet packet { get; set; }
-        }
-
-        ConcurrentDictionary<string, UserInfo> userInfos = new ConcurrentDictionary<string, UserInfo>();
-        ConcurrentDictionary<string, Socket> userSockets = new ConcurrentDictionary<string, Socket>();
         IPAddress localIP;
+        ConcurrentDictionary<string, Client> peers = new ConcurrentDictionary<string, Client>();
 
         public mainForm()
         {
@@ -53,7 +44,8 @@ namespace Turnover
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message + Environment.NewLine + ex.StackTrace);
+                MessageBox.Show("init: " + ex.Message + Environment.NewLine + ex.StackTrace);
+                //MessageBox.Show(ex.Message + Environment.NewLine + ex.StackTrace);
                 /*MessageBox.Show(this,
                                 "Error in application configuration file!",
                                 "Error Turnover", MessageBoxButtons.OK,
@@ -85,110 +77,21 @@ namespace Turnover
                 if (lvi == null)
                 {
                     ListViewItem lvItem = new ListViewItem();
-                    lvItem.Text = userIP;
+                    lvItem.Text = p.NickName;
                     lvItem.Name = "lvi_" + userIP;
+                    lvItem.Tag = p;
                     lvItem.ImageIndex = 0;
-                    //lvItem.Tag = new UserInfo() {remoteSocket = 0, };
-                    lvItem.SubItems.Add(p.NickName);
-                    lvItem.SubItems.Add(p.privatePort.ToString());
                     usersOnline.Items.Add(lvItem);
                 }
                 else
                 {
-                    if (lvi.SubItems[1].Text.Equals(p.NickName) == false)
-                        lvi.SubItems[1].Text = p.NickName;
-                    if(lvi.SubItems[2].Text.Equals(p.privatePort.ToString()) == false)
-                        lvi.SubItems[2].Text = p.privatePort.ToString();
-                }
-
-                /*if (userInfos.ContainsKey(userIP)) return;
-                
-                Socket remSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-                try
-                {
-                    MessageBox.Show("new socket");
-                    remSocket.Connect(new IPEndPoint(p.from.Address, p.privatePort));
-                    if (!remSocket.Connected) throw new Exception("Remote connection failure");
-                    if (!userInfos.TryAdd(userIP, new UserInfo() { 
-                        remoteSocket = remSocket,
-                        acceptedClient = null,
-                        packet = p})) throw new Exception("Error save user socket");
-                            
-                }
-                catch(Exception ex)
-                {
-                    MessageBox.Show(ex.Message);
-                    remSocket.Shutdown(SocketShutdown.Both);
-                    remSocket.Close();
-                }
-
-                ListViewItem lvi = FindListItem(usersOnline, packetFrom);
-
-                if (lvi == null)
-                {
-                    Socket userSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-                    try
+                    Packet pack = lvi.Tag as Packet;
+                    if (pack.NickName.Equals(p.NickName) == false || pack.privatePort.Equals(p.privatePort) == false)
                     {
-                        userSocket.Connect(new IPEndPoint(p.from.Address, p.privatePort));
-                        if (!userSocket.Connected) throw new Exception("Connection failure");
-                        
-                        ListViewItem lvItem = new ListViewItem();
-                        lvItem.Text = p.from.Address.ToString();
-                        lvItem.Name = "lvi_" + p.from.Address.ToString();
-                        lvItem.ImageIndex = 0;
-                        lvItem.Tag = userSocket;
-                        lvItem.SubItems.Add(p.NickName);
-                        lvItem.SubItems.Add(p.privatePort.ToString());
-                        usersOnline.Items.Add(lvItem);
-                    }
-                    catch
-                    {
-                        userSocket.Shutdown(SocketShutdown.Both);
-                        userSocket.Close();
-                    }
-                }
-                else
-                {
-                    if (lvi.SubItems[1].Text.Equals(p.NickName) == false) lvi.SubItems[1].Text = p.NickName;
-                    //Socket userSocket = lvi.Tag as Socket;
-                    //lvi.SubItems[2].Text = p.privatePort.ToString();
-                }
-                */
-
-                /*if (!clientSockets.ContainsKey(packetFrom))
-                {
-                    Socket s = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-                    clientSockets.Add(packetFrom, s);
-                    try
-                    {
-                        s.Connect(new IPEndPoint(p.from.Address, Properties.Settings.Default.privatePort));
-
-                        for (int i = 0; i < usersOnline.Items.Count; ++i)
-                        {
-                            Packet packet = usersOnline.Items[i].Tag as Packet;
-
-                            if (packet.from.Address.Equals(p.from.Address))
-                            {
-                                usersOnline.Items[i].SubItems[1].Text = p.NickName;
-                                usersOnline.Items[i].SubItems[2].Text = p.privatePort.ToString();
-                                return;
-                            }
-                        }
-
-                        ListViewItem lvi = new ListViewItem();
-                        lvi.Text = p.from.Address.ToString();
-                        lvi.ImageIndex = 0;
+                        lvi.Text = p.NickName;
                         lvi.Tag = p;
-                        lvi.SubItems.Add(p.NickName);
-                        lvi.SubItems.Add(p.privatePort.ToString());
-                        usersOnline.Items.Add(lvi);
                     }
-                    catch
-                    {
-                        clientSockets[packetFrom].Close();
-                        clientSockets.Remove(packetFrom);
-                    }
-                }*/
+                }
             });            
         }
 
@@ -197,87 +100,29 @@ namespace Turnover
             Invoke((MethodInvoker)delegate
             {
                 ListViewItem lvi = FindListItem(usersOnline, p.from.Address.ToString());
-                if (lvi != null) usersOnline.Items.Remove(lvi);
+                if (lvi != null)
+                {
+                    usersOnline.Items.Remove(lvi);
+                }
             });
         }
-
+        
         void globalServer_AcceptedPM(Socket e)
         {
-            Client client = new Client(e);
-            client.Received += client_DataReceived;
-            client.Disconnected += client_Disconnected;
-
-            Invoke((MethodInvoker)delegate
+            try
             {
+                Client client = new Client(e);
+                client.Received += client_DataReceived;
+                client.Disconnected += client_Disconnected;
+
                 string userIP = client.EndPoint.Address.ToString();
-                
-                if (userInfos.ContainsKey(userIP))
-                {
-                    UserInfo user = userInfos[userIP];
-                    user.acceptedClient = client;
 
-                    try
-                    {
-                        // Если исходящее соединение уже установлено
-                        if (!user.remoteSocket.Connected) throw new Exception("Connection failure");
-
-                        ListViewItem lvItem = new ListViewItem();
-                        lvItem.Text = userIP;
-                        lvItem.Name = "lvi_user_info_" + userIP; 
-                        lvItem.ImageIndex = 0;
-                        lvItem.Tag = user;
-                        lvItem.SubItems.Add(user.packet.NickName);
-                        lvItem.SubItems.Add(user.packet.privatePort.ToString());
-                        usersOnline.Items.Add(lvItem);
-                    }
-                    catch
-                    {
-                        userInfos.TryRemove(userIP, out user);
-                        user.remoteSocket.Shutdown(SocketShutdown.Both);
-                        user.remoteSocket.Close();
-
-                        user.acceptedClient.Close();
-                    }
-                }
-
-                /*if (chatTabs.TabPages.ContainsKey(userIP)) return;
-
-                TabPage page = new TabPage(userIP);
-                page.Name = userIP;
-                page.Tag = client;
-
-                TextBox privateBox = new TextBox();
-                privateBox.Name = userIP;
-                privateBox.Multiline = true;
-                privateBox.ReadOnly = true;
-                privateBox.BackColor = Color.White;
-                privateBox.Location = new Point(6, 7);
-                privateBox.ScrollBars = ScrollBars.Vertical;
-                privateBox.Size = new System.Drawing.Size(555, 365);
-                page.Controls.Add(privateBox);
-
-                chatTabs.TabPages.Add(page);*/
-
-                /*for (int i = 0; i < usersOnline.Items.Count; ++i)
-                {
-                    Client c = usersOnline.Items[i].Tag as Client;
-
-                    if (c.EndPoint.Address.Equals(ep.Address))
-                    {
-                        usersOnline.Items[i].SubItems[1].Text = p.NickName;
-                        usersOnline.Items[i].SubItems[2].Text = (p.privateIPEndPoint == null) ? "null" : p.privateIPEndPoint.Address.ToString();
-                        return;
-                    }
-                }
-
-                ListViewItem lvi = new ListViewItem();
-                lvi.Text = client.EndPoint.Address.ToString();
-                lvi.ImageIndex = 0;
-                lvi.Tag = client;
-                lvi.SubItems.Add(p.NickName);
-                lvi.SubItems.Add((p.privateIPEndPoint == null) ? "null" : p.privateIPEndPoint.ToString());
-                usersOnline.Items.Add(lvi);*/
-            });
+                peers.TryAdd(userIP, client);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message);
+            }
         }
 
         #endregion
@@ -287,12 +132,50 @@ namespace Turnover
         {
             Invoke((MethodInvoker)delegate
             {
-                TabPage page = chatTabs.TabPages[sender.EndPoint.Address.ToString()];
-                TextBox privateBox = page.Controls[sender.EndPoint.Address.ToString()] as TextBox;
+                string userIP = sender.EndPoint.Address.ToString();
+                try
+                {
+                    switch (p.msgType)
+                    {
+                        case MSG_TYPE.MESSAGE:
+                            {
+                                TabPage page = GetPage(userIP);
+                                TextBox privateBox = page.Controls["privateBox_" + userIP] as TextBox;
 
-                string formatted_data = string.Format("[{0}][{1}][{2}] ", p.from.Address, DateTime.Now, p.NickName) + Environment.NewLine
-                + Packet.encoding.GetString(p.data) + Environment.NewLine;
-                privateBox.AppendText(formatted_data);                
+                                string formatted_data = string.Format("[{0}][{1}][{2}] ", p.from.Address, DateTime.Now, p.NickName) + Environment.NewLine
+                                + Packet.encoding.GetString(p.data) + Environment.NewLine;
+                                privateBox.AppendText(formatted_data);
+                            }
+                            break;
+                        case MSG_TYPE.FILE:
+                            {
+                                TabPage page = GetPage(userIP);
+                                TextBox privateBox = page.Controls["privateBox_" + userIP] as TextBox;
+
+                                /*string formatted_data = string.Format("[{0}][{1}][{2}] ", p.from.Address, DateTime.Now, p.NickName) + Environment.NewLine
+                                + Packet.encoding.GetString(p.data) + Environment.NewLine;
+                                privateBox.AppendText(formatted_data);*/
+                                
+
+                                SaveFileDialog sfd = new SaveFileDialog();
+                                if(sfd.ShowDialog() != System.Windows.Forms.DialogResult.OK) return;
+
+                                using (FileStream fs = new FileStream(sfd.FileName, FileMode.CreateNew, FileAccess.Write))
+                                {
+                                    fs.Write(p.data, 0, p.data.Length);                                    
+                                }
+
+
+                                privateBox.AppendText("Принят файл: " + sfd.FileName + Environment.NewLine);
+                            }
+                            break;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("Data received: " + ex.Message);
+                }
+                
             });
         }
 
@@ -303,33 +186,17 @@ namespace Turnover
                 try
                 {
                     string userIP = sender.EndPoint.Address.ToString();
-
-                    if (userInfos.ContainsKey(userIP))
-                    {
-                        UserInfo user = null;
-                        userInfos.TryRemove(userIP, out user);
-                        user.remoteSocket.Shutdown(SocketShutdown.Both);
-                        user.remoteSocket.Close();
-
-                        ListViewItem lvi = FindListItem(usersOnline, userIP);
-                        if (lvi != null)
-                            usersOnline.Items.Remove(lvi);
-                    }
-
+                    Client client;
+                    if (peers.TryRemove(userIP, out client) == false) throw new Exception("peer TryRemove failure");
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show(ex.Message);
+                    MessageBox.Show("Client disconnected: " + ex.Message);
                 }
-                MessageBox.Show("Disconnected");
+                
             });
         }
 
-        
-
-        
-
-        
 
         private void usersOnline_DoubleClick(object sender, EventArgs e)
         {
@@ -337,59 +204,30 @@ namespace Turnover
             if (listView.SelectedItems.Count == 1)
             {
                 ListViewItem lvi = listView.SelectedItems[0];
-                Socket socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-                try
-                {
-                    socket.Connect(new IPEndPoint(IPAddress.Parse(lvi.Text), int.Parse(lvi.SubItems[2].Text)));
-                    if(!socket.Connected) throw new Exception("Connect failure.");
 
-                    if (!userSockets.TryAdd(lvi.Text, socket)) throw new Exception("Save socket failure");
+                string userIP = lvi.Name.Substring(4);
 
-                    TabPage privatePage = new TabPage(lvi.Text);
-                    privatePage.Name = "page_" + lvi.Text;
-                    privatePage.Tag = socket;
-
-                    TextBox privateBox = new TextBox();
-                    privateBox.Name = "text_box_" + lvi.Text;
-                    privateBox.Multiline = true;
-                    privateBox.ReadOnly = true;
-                    privateBox.BackColor = Color.White;
-                    privateBox.Location = new Point(6, 7);
-                    privateBox.ScrollBars = ScrollBars.Vertical;
-                    privateBox.Size = new System.Drawing.Size(555, 365);
-                    privatePage.Controls.Add(privateBox);
-
-                    chatTabs.TabPages.Add(privatePage);
-                    
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show(ex.Message);
-                    socket.Shutdown(SocketShutdown.Both);
-                    socket.Close();
-                }
-
+                TabPage privatePage = GetPage(userIP);
+                chatTabs.SelectTab(privatePage);
             }
         }
 
-        private void usersOnline_SelectedIndexChanged(object sender, EventArgs e)
+        private void chatTabs_SelectedIndexChanged(object sender, EventArgs e)
         {
-            /*if (usersOnline.SelectedItems.Count == 1)
-            {
-                msgBox.AppendText(usersOnline.SelectedItems[0].ToString() + Environment.NewLine);
-            } */  
+            msgBox.Focus();
         }
 
         private void btn_send_Click(object sender, EventArgs e)
         {
             Invoke((MethodInvoker)delegate
             {
+                // Получаем сообщение
                 string message = msgBox.Text;
-                
+                // Формируем пакет
                 Packet packet = new Packet(MSG_TYPE.MESSAGE, Packet.encoding.GetBytes(message),
                     Properties.Settings.Default.NickName,
                     Properties.Settings.Default.privatePort);
-
+                // Если выбрана первая вкладка - вещаем в общий чат
                 if (chatTabs.SelectedIndex == 0)
                 {
                     globalServer.SendMulticastMessage(packet);
@@ -397,38 +235,76 @@ namespace Turnover
                     msgBox.Focus();
                     return;
                 }
+                // Иначе отправляем сообщение указанному пользователю
                 TabPage selectedPage = chatTabs.SelectedTab;
-                string userIP = selectedPage.Text;
-
-                Socket socket = selectedPage.Tag as Socket;
-
-                globalServer.SendPrivateMessage(socket, packet);
-
-                /*string tabName = selectedPage.Name;
-                if (userInfos.ContainsKey(tabName)
-                    && userInfos.ContainsKey(tabName)
-                    && userInfos[tabName].Connected)
+                string userIP = selectedPage.Name.Substring(12);
+                TextBox privateBox = selectedPage.Controls["privateBox_" + userIP] as TextBox;
+                ListViewItem lvi = FindListItem(usersOnline, userIP);
+                if(lvi == null)
                 {
-                    globalServer.SendPrivateMessage(userInfos[tabName], packet);
-
-                    packet.from = (IPEndPoint)userInfos[tabName].RemoteEndPoint;
-
-                    TextBox privateBox = selectedPage.Controls[tabName] as TextBox;
-
-                    string formatted_data = string.Format("[{0}][{1}][{2}] ", packet.from.Address, DateTime.Now, packet.NickName) + Environment.NewLine
-                    + Packet.encoding.GetString(packet.data) + Environment.NewLine;
-                    privateBox.AppendText(formatted_data);
-                }
-                else
                     MessageBox.Show("Пользователь вне сети");
-                 */
+                    return;
+                }
+
+                Socket socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+
+                try
+                {
+                    Packet p = lvi.Tag as Packet;
+                    socket.Connect(new IPEndPoint(p.from.Address, p.privatePort));
+                    if (socket.Connected)
+                    {
+                        string formatted_data = string.Format("[{0}][{1}][{2}] ", "0"/*packet.from.Address*/, DateTime.Now, packet.NickName) + Environment.NewLine
+                            + Packet.encoding.GetString(packet.data) + Environment.NewLine;
+                        privateBox.AppendText(formatted_data);
+
+                        globalServer.SendPrivateMessage(socket, packet);
+                        msgBox.Clear();
+                        msgBox.Focus();
+                    }
+                    else
+                    {
+                        MessageBox.Show("Пользователь вне сети");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(ex.Message);
+                }
+                finally
+                {
+                    socket.Disconnect(false);
+                    socket.Close();
+                }
+
             });
         }
 
-        private void mainForm_FormClosed(object sender, FormClosedEventArgs e)
+        private TabPage GetPage(string userIP)
         {
-            globalServer.StopGlobalListener();
-            //privateServer.Stop();
+            ListViewItem lvi = FindListItem(usersOnline, userIP);
+
+            string userName = lvi.Text;
+
+            TabPage privatePage = chatTabs.TabPages["privatePage_" + userIP];
+            if (privatePage != null) return privatePage;
+
+            privatePage = new TabPage(userName);
+            privatePage.Name = "privatePage_" + userIP;
+
+            TextBox privateBox = new TextBox();
+            privateBox.Name = "privateBox_" + userIP;
+            privateBox.Multiline = true;
+            privateBox.ReadOnly = true;
+            privateBox.BackColor = Color.White;
+            privateBox.Location = new Point(6, 7);
+            privateBox.ScrollBars = ScrollBars.Vertical;
+            privateBox.Size = new System.Drawing.Size(555, 365);
+            privatePage.Controls.Add(privateBox);
+
+            chatTabs.TabPages.Add(privatePage);
+
+            return privatePage;
         }
 
         private ListViewItem FindListItem(ListView lv, string userIP)
@@ -453,7 +329,8 @@ namespace Turnover
             return localIP;
         }
 
-        #region MessageBox, NicknameBox
+        #region MessageBox, NicknameBox, Form
+
         private void msgBox_TextChanged(object sender, EventArgs e)
         {
             btn_send.Enabled = msgBox.Text.Length > 0;
@@ -511,6 +388,95 @@ namespace Turnover
                 e.Handled = true;
             }
         }
+
+        private void mainForm_FormClosed(object sender, FormClosedEventArgs e)
+        {
+            globalServer.StopGlobalListener();
+        }
+
         #endregion
+
+        #region Menu items
+        private void userMenu_Opening(object sender, CancelEventArgs e)
+        {
+            if (usersOnline.SelectedItems.Count <= 0)
+                e.Cancel = true;
+        }
+
+        private void отправитьСообщениеToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (usersOnline.SelectedItems.Count == 1)
+            {
+                ListViewItem lvi = usersOnline.SelectedItems[0];
+                string userIP = lvi.Name.Substring(4);
+                TabPage privatePage = GetPage(userIP);
+                chatTabs.SelectTab(privatePage);
+            }
+        }
+
+        private void отправитьФайлToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (usersOnline.SelectedItems.Count == 1)
+            {
+                OpenFileDialog ofd = new OpenFileDialog();
+                if (ofd.ShowDialog() != System.Windows.Forms.DialogResult.OK) return;
+
+                ListViewItem lvi = usersOnline.SelectedItems[0];
+                Packet packet = lvi.Tag as Packet;
+                string userIP = lvi.Name.Substring(4);
+                TabPage privatePage = GetPage(userIP);
+                chatTabs.SelectTab(privatePage);
+
+                byte []fileBytes = File.ReadAllBytes(ofd.FileName);
+
+                try
+                {
+                    using (Socket sc = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp))
+                    {
+                        sc.Connect(new IPEndPoint(packet.from.Address, packet.privatePort));
+                        Packet p = new Packet(MSG_TYPE.FILE, fileBytes, Properties.Settings.Default.NickName, Properties.Settings.Default.privatePort);
+                        globalServer.SendPrivateMessage(sc, p);
+                    }
+                }
+                catch(Exception ex)
+                {
+                    MessageBox.Show(ex.Message);
+                }
+            }
+        }
+
+        private void посмотретьСетевыеДанныеToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (usersOnline.SelectedItems.Count == 1)
+            {
+                ListViewItem lvi = usersOnline.SelectedItems[0];
+                Packet packet = lvi.Tag as Packet;
+                
+                Form form = new Form();
+                Label lblIP = new Label();
+                Label lblPrivatePort = new Label();
+
+                int width = 180;
+                int height = 20;
+                form.Text = "Username: " + packet.NickName;
+                form.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedToolWindow;
+                form.Size = new System.Drawing.Size(width, 120);
+                form.StartPosition = FormStartPosition.CenterParent;
+
+                lblIP.Size = new System.Drawing.Size(width, height);
+                lblIP.Location = new Point(10, 15);
+                lblIP.Text = "IP address: " + packet.from.Address.ToString();
+
+                lblPrivatePort.Size = new System.Drawing.Size(width, height);
+                lblPrivatePort.Location = new Point(10, 45);
+                lblPrivatePort.Text = "Port for pm messages: " + packet.privatePort.ToString();
+
+                form.Controls.Add(lblIP);
+                form.Controls.Add(lblPrivatePort);
+                form.ShowDialog();
+            }
+        }
+        #endregion
+
     }
 }

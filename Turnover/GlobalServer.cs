@@ -59,10 +59,22 @@ namespace Turnover
 
         private void acceptedPMCallback(IAsyncResult ar)
         {
-            Socket s = privateListener.EndAcceptSocket(ar);
-            if (AcceptedPM != null)
-                AcceptedPM(s);
-            privateListener.BeginAcceptSocket(new AsyncCallback(acceptedPMCallback), null);
+            try
+            {
+                Socket s = privateListener.EndAcceptSocket(ar);
+
+                if (AcceptedPM != null)
+                    AcceptedPM(s);
+                privateListener.BeginAcceptSocket(new AsyncCallback(acceptedPMCallback), null);
+            }
+            catch (ObjectDisposedException)
+            { return; }
+            catch (NullReferenceException)
+            { return; }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message);
+            }
         }
 
         private UdpClient udpclient;
@@ -75,14 +87,13 @@ namespace Turnover
 
         public void SendMulticastMessage(Packet packet)
         {
-            Byte[] encrypted = Packet.Encrypt(Packet.ObjectToByteArray(packet));
+            Byte[] encrypted = new Security().Encrypt(Packet.ObjectToByteArray(packet));
             udpclient.Send(encrypted, encrypted.Length, remoteEP);
-            MessageBox.Show(remoteEP.ToString());
         }
 
         public void SendPrivateMessage(Socket remote, Packet packet)
         {
-            Byte[] encrypted = Packet.Encrypt(Packet.ObjectToByteArray(packet));
+            Byte[] encrypted = new Security().Encrypt(Packet.ObjectToByteArray(packet));
             remote.Send(encrypted);
         }
 
@@ -126,6 +137,7 @@ namespace Turnover
             IPEndPoint localEP = new IPEndPoint(IPAddress.Any, multicastPort);
 
             client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
+            client.Ttl = 0;
             client.ExclusiveAddressUse = false;
 
             client.Client.Bind(localEP);
@@ -150,47 +162,54 @@ namespace Turnover
 
         void receiveCallback(IAsyncResult ar)
         {
-            UdpData udpData = (UdpData)ar.AsyncState;
-            UdpClient client = udpData.workUDPclient;
-            IPEndPoint ep = udpData.ipEndPoint;
-
-
-            byte[] receivedBytes = client.EndReceive(ar, ref ep);
-            byte[] decryptedBytes = Packet.Decrypt(receivedBytes);
-
-            Packet receivedPacket = (Packet)Packet.ByteArrayToObject(decryptedBytes);
-            receivedPacket.from = ep;
-            
-            switch (receivedPacket.msgType)
+            try
             {
-                case MSG_TYPE.STATUS_ONLINE:
-                    {
-                        if (ClientStatusOnline != null)
-                            ClientStatusOnline(receivedPacket);
-                    }
-                    break;
-                case MSG_TYPE.STATUS_OFFLINE:
-                    {
-                        if (ClientStatusOffline != null)
-                            ClientStatusOffline(receivedPacket);
-                    }
-                    break;
-                case MSG_TYPE.MESSAGE:
-                    {
-                        if (ReceivedMulticast != null)
-                            ReceivedMulticast(receivedPacket);
-                    }
-                    break;
-                case MSG_TYPE.FILE:
-                    {
-                    }
-                    break;
-                default:
-                    break;
+                UdpData udpData = (UdpData)ar.AsyncState;
+                UdpClient client = udpData.workUDPclient;
+                IPEndPoint ep = udpData.ipEndPoint;
+
+
+                byte[] receivedBytes = client.EndReceive(ar, ref ep);
+                byte[] decryptedBytes = new Security().Decrypt(receivedBytes);
+
+                Packet receivedPacket = (Packet)Packet.ByteArrayToObject(decryptedBytes);
+                receivedPacket.from = ep;
+
+                switch (receivedPacket.msgType)
+                {
+                    case MSG_TYPE.STATUS_ONLINE:
+                        {
+                            if (ClientStatusOnline != null)
+                                ClientStatusOnline(receivedPacket);
+                        }
+                        break;
+                    case MSG_TYPE.STATUS_OFFLINE:
+                        {
+                            if (ClientStatusOffline != null)
+                                ClientStatusOffline(receivedPacket);
+                        }
+                        break;
+                    case MSG_TYPE.MESSAGE:
+                        {
+                            if (ReceivedMulticast != null)
+                                ReceivedMulticast(receivedPacket);
+                        }
+                        break;
+                    case MSG_TYPE.FILE:
+                        {
+                        }
+                        break;
+                    default:
+                        break;
+                }
+
+
+                client.BeginReceive(new AsyncCallback(receiveCallback), udpData);
             }
-
-
-            client.BeginReceive(new AsyncCallback(receiveCallback), udpData);
+            catch (Exception ex)
+            {
+                MessageBox.Show("receive " + ex.Message);
+            }
         }
 
         

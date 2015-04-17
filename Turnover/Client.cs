@@ -66,8 +66,8 @@ namespace Turnover
                     if (handler.Available == 0)
                     {
                         //MessageBox.Show(string.Format("Available: {0}, read: {1}, reciveBuffSize: {2}", handler.Available, read, handler.ReceiveBufferSize));
-                        byte [] totalReceived = state.stream.ToArray();
-                        byte[] decryptedBytes = Packet.Decrypt(totalReceived);
+                        byte[] totalReceived = state.stream.ToArray();
+                        byte[] decryptedBytes = new Security().Decrypt(totalReceived);
                         Packet receivedPacket = (Packet)Packet.ByteArrayToObject(decryptedBytes);
                         receivedPacket.from = (IPEndPoint)handler.RemoteEndPoint;
                         if (Received != null) Received(this, receivedPacket);
@@ -91,9 +91,14 @@ namespace Turnover
                 if (Disconnected != null) Disconnected(this);
                 Close();
             }
+            catch (ObjectDisposedException)
+            {
+                if (Disconnected != null) Disconnected(this);
+                Close();
+            }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message);
+                MessageBox.Show("Client recive callback error: " + ex.Message);
             }
         }
 
