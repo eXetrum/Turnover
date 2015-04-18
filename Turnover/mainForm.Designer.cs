@@ -168,6 +168,7 @@ namespace Turnover
             this.chatTabs.Size = new System.Drawing.Size(573, 404);
             this.chatTabs.TabIndex = 6;
             this.chatTabs.SelectedIndexChanged += new System.EventHandler(this.chatTabs_SelectedIndexChanged);
+            this.chatTabs.DoubleClick += new System.EventHandler(this.chatTabs_DoubleClick);
             // 
             // tabGlobalChat
             // 

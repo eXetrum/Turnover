@@ -15,6 +15,25 @@ namespace Turnover
 {
     class GlobalServer
     {
+        public delegate void ClientReceivedMulticastHandler(Packet p);
+        public delegate void ClientStatusOnlineChangedHandle(Packet p);
+        public delegate void ClientStatusOfflineChangedHandle(Packet p);
+
+        public event ClientReceivedMulticastHandler ReceivedMulticast;
+        public event ClientStatusOnlineChangedHandle ClientStatusOnline;
+        public event ClientStatusOfflineChangedHandle ClientStatusOffline;
+
+        public delegate void SocketAcceptedHandler(Socket e);
+        public event SocketAcceptedHandler AcceptedPM;
+
+        private UdpClient udpSender;
+        private IPAddress multicastAddress;
+        private int multicastPort;
+        private IPEndPoint multicastEP;
+        private int privatePort;
+        private TcpListener privateListener;
+        private Thread inviteThread = null;
+        ManualResetEvent inviteEvent = new ManualResetEvent(false);
 
         public class UdpData
         {
@@ -27,35 +46,83 @@ namespace Turnover
             // один из зарезервированных для локальных нужд UDP адресов
             multicastAddress = IPAddress.Parse(Properties.Settings.Default.multicastGroup); 
             multicastPort = Properties.Settings.Default.multicastPort;
+            multicastEP = new IPEndPoint(multicastAddress, multicastPort);
 
-            udpclient = new UdpClient();
-            udpclient.JoinMulticastGroup(multicastAddress);
-            remoteEP = new IPEndPoint(multicastAddress, multicastPort);
+            udpSender = new UdpClient();
+            /*udpclient.MulticastLoopback = true;
+            udpclient.JoinMulticastGroup(multicastAddress);*/
+            
             ////////////////////////////////////////////////////////////////
             privatePort = Properties.Settings.Default.privatePort;
 
+            
+            ////////////////////////////////////////////////////////////////
+        }
+
+        public void Listen()
+        {
+            // TCP listener для приватных сообщений
             privateListener = new TcpListener(new IPEndPoint(IPAddress.Any, privatePort));
-
-
-            /*var port = ((IPEndPoint)privateListener.LocalEndpoint).Port;
-            privatePort = port;*/
-
             privateListener.Start(0);
-
             privateListener.BeginAcceptSocket(acceptedPMCallback, null);
 
-            ////////////////////////////////////////////////////////////////
+            // UDP listener для сообщений мультикаст группы
+            IPEndPoint localEP = new IPEndPoint(IPAddress.Any, multicastPort);
+            UdpClient client = new UdpClient();
+            client.ExclusiveAddressUse = false;            
+            client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
+            client.Client.Bind(localEP);
+            client.JoinMulticastGroup(multicastAddress);
+
+            UdpData udpData = new UdpData();
+            udpData.workUDPclient = client;
+            udpData.ipEndPoint = localEP;
+
+            client.BeginReceive(new AsyncCallback(receiveCallback), udpData);
+
             // Разослать приглашения
             inviteThread = new Thread(Inviter);
             inviteThread.IsBackground = true;
             inviteThread.Start();
-
         }
-        TcpListener privateListener;
 
+        public void StopGlobalListener()
+        {
+            inviteEvent.Set();
+            inviteThread.Join();
 
-        public delegate void SocketAcceptedHandler(Socket e);
-        public event SocketAcceptedHandler AcceptedPM;
+            //udpSender.DropMulticastGroup(multicastAddress);
+            udpSender.Close();
+
+            privateListener.Stop();
+        }
+
+        private void Inviter(object sender)
+        {
+            do
+            {
+                Packet invitePacket = new Packet(MSG_TYPE.STATUS_ONLINE, null,
+                    Properties.Settings.Default.NickName,
+                    privatePort);
+                SendMulticastMessage(invitePacket);
+
+            } while (!inviteEvent.WaitOne(2000));
+            // Рассылаем прощание
+            Packet endPacket = new Packet(MSG_TYPE.STATUS_OFFLINE, null, Properties.Settings.Default.NickName, privatePort);
+            SendMulticastMessage(endPacket);
+        }
+
+        public void SendMulticastMessage(Packet packet)
+        {
+            Byte[] encrypted = new Security().Encrypt(Packet.ObjectToByteArray(packet));
+            udpSender.Send(encrypted, encrypted.Length, multicastEP);
+        }
+
+        public void SendPrivateMessage(Socket remote, Packet packet)
+        {
+            Byte[] encrypted = new Security().Encrypt(Packet.ObjectToByteArray(packet));
+            remote.Send(encrypted);
+        }
 
         private void acceptedPMCallback(IAsyncResult ar)
         {
@@ -73,92 +140,9 @@ namespace Turnover
             { return; }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message);
+                MessageBox.Show("SERVER AcceptPMcallback: " + ex.Message);
             }
-        }
-
-        private UdpClient udpclient;
-        private IPAddress multicastAddress;
-        private int multicastPort;
-        private IPEndPoint remoteEP;
-        private int privatePort;
-
-        private Thread inviteThread = null;
-
-        public void SendMulticastMessage(Packet packet)
-        {
-            Byte[] encrypted = new Security().Encrypt(Packet.ObjectToByteArray(packet));
-            udpclient.Send(encrypted, encrypted.Length, remoteEP);
-        }
-
-        public void SendPrivateMessage(Socket remote, Packet packet)
-        {
-            Byte[] encrypted = new Security().Encrypt(Packet.ObjectToByteArray(packet));
-            remote.Send(encrypted);
-        }
-
-
-        ManualResetEvent inviteEvent = new ManualResetEvent(false);
-        private void Inviter(object sender)
-        {
-            do
-            {
-                Packet invitePacket = new Packet(MSG_TYPE.STATUS_ONLINE, null,
-                    Properties.Settings.Default.NickName,
-                    privatePort);
-                SendMulticastMessage(invitePacket);
-
-            } while (!inviteEvent.WaitOne(2000));
-            // Рассылаем прощание
-            Packet endPacket = new Packet(MSG_TYPE.STATUS_OFFLINE, null, Properties.Settings.Default.NickName, privatePort);
-            SendMulticastMessage(endPacket);
-        }
-
-        public void StopGlobalListener()
-        {
-            inviteEvent.Set();
-            inviteThread.Join();
-
-            udpclient.DropMulticastGroup(multicastAddress);
-            udpclient.Close();
-
-            privateListener.Stop();
-        }
-
-
-        ManualResetEvent allDone = new ManualResetEvent(false);
-
-        public void Listen()
-        {
-            UdpClient client = new UdpClient();
-
-            client.ExclusiveAddressUse = false;
-            
-            IPEndPoint localEP = new IPEndPoint(IPAddress.Any, multicastPort);
-
-            client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
-            client.Ttl = 0;
-            client.ExclusiveAddressUse = false;
-
-            client.Client.Bind(localEP);
-
-            client.JoinMulticastGroup(multicastAddress);
-
-            UdpData udpData = new UdpData();
-            udpData.workUDPclient = client;
-            udpData.ipEndPoint = localEP;
-
-            client.BeginReceive(new AsyncCallback(receiveCallback), udpData);            
-        }
-
-        public delegate void ClientReceivedMulticastHandler(Packet p);
-        public delegate void ClientStatusOnlineChangedHandle(Packet p);
-        public delegate void ClientStatusOfflineChangedHandle(Packet p);
-
-        public event ClientReceivedMulticastHandler ReceivedMulticast;        
-        public event ClientStatusOnlineChangedHandle ClientStatusOnline;        
-        public event ClientStatusOfflineChangedHandle ClientStatusOffline;
-        
+        }    
 
         void receiveCallback(IAsyncResult ar)
         {
@@ -208,7 +192,7 @@ namespace Turnover
             }
             catch (Exception ex)
             {
-                MessageBox.Show("receive " + ex.Message);
+                MessageBox.Show("SERVER ReceiveCallback: " + ex.Message);
             }
         }
 

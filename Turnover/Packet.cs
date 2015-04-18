@@ -25,10 +25,8 @@ namespace Turnover
         public MSG_TYPE msgType { get; private set; }
         public byte[] data { get; private set; }
         public string NickName { get; set; }
-        //public IPEndPoint privateIPEndPoint { get; private set; }
         public int privatePort { get; set; }
 
-        
         public IPEndPoint from { get; set; }
 
         public Packet(MSG_TYPE msgType, byte[] data, string NickName, int privatePort/*IPEndPoint privateIPEndPoint*/)

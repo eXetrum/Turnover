@@ -12,16 +12,13 @@ namespace Turnover
 {
     public class Client
     {
-        public static Encoding encoding = new UTF8Encoding();
-
         public IPEndPoint EndPoint { get; private set; }
         private Socket clientSocket;
 
         public delegate void DataReceivedEventHandler(Client sender, Packet p);
         public delegate void DisconnectedEventHandler(Client sender);
         public event DataReceivedEventHandler Received;
-        public event DisconnectedEventHandler Disconnected;
-        
+        public event DisconnectedEventHandler Disconnected;        
 
         public Client(Socket accepted)
         {
@@ -31,13 +28,8 @@ namespace Turnover
             StateObject state = new StateObject();
             state.workSocket = clientSocket;
 
-            //NetworkStream ns = new NetworkStream(clientSocket);
-
             clientSocket.BeginReceive(state.buffer, 0, StateObject.BufferSize, 
                 SocketFlags.None, new AsyncCallback(receiveCallback), state);
-
-            //clientSocket.BeginReceive(state.buffer, 0, StateObject.BufferSize, 0, new AsyncCallback(receiveCallback), state);
-
         }
 
         public class StateObject
@@ -99,6 +91,8 @@ namespace Turnover
             catch (Exception ex)
             {
                 MessageBox.Show("Client recive callback error: " + ex.Message);
+                if (Disconnected != null) Disconnected(this);
+                Close();
             }
         }
 

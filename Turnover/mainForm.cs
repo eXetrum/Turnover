@@ -17,7 +17,7 @@ namespace Turnover
 {
     public partial class mainForm : Form
     {
-        
+        const int MAX_PATH = 260;
 
         string textBefore = string.Empty;
         GlobalServer globalServer = null;
@@ -50,6 +50,7 @@ namespace Turnover
                                 "Error in application configuration file!",
                                 "Error Turnover", MessageBoxButtons.OK,
                                 MessageBoxIcon.Error);*/
+                Application.Exit();
             }
         }
 
@@ -152,21 +153,40 @@ namespace Turnover
                                 TabPage page = GetPage(userIP);
                                 TextBox privateBox = page.Controls["privateBox_" + userIP] as TextBox;
 
+                                byte[] fileName = new byte[MAX_PATH];
+                                byte[] fileData = new byte[p.data.Length - MAX_PATH];
+
+                                Buffer.BlockCopy(p.data, 0, fileName, 0, MAX_PATH);
+                                Buffer.BlockCopy(p.data, MAX_PATH, fileData, 0, p.data.Length - MAX_PATH);
+
+
                                 /*string formatted_data = string.Format("[{0}][{1}][{2}] ", p.from.Address, DateTime.Now, p.NickName) + Environment.NewLine
                                 + Packet.encoding.GetString(p.data) + Environment.NewLine;
                                 privateBox.AppendText(formatted_data);*/
-                                
 
-                                SaveFileDialog sfd = new SaveFileDialog();
-                                if(sfd.ShowDialog() != System.Windows.Forms.DialogResult.OK) return;
 
-                                using (FileStream fs = new FileStream(sfd.FileName, FileMode.CreateNew, FileAccess.Write))
+                                // Get the current directory. 
+                                string path = Directory.GetCurrentDirectory();
+                                string target = @"Received Documents";
+                                path = Path.Combine(path, target);
+                                //Console.WriteLine("The current directory is {0}", path);
+                                if (!Directory.Exists(path))
                                 {
-                                    fs.Write(p.data, 0, p.data.Length);                                    
+                                    Directory.CreateDirectory(path);
+                                }
+
+                                /*SaveFileDialog sfd = new SaveFileDialog();
+                                if(sfd.ShowDialog() != System.Windows.Forms.DialogResult.OK) return;*/
+                                string fName = Packet.encoding.GetString(fileName).TrimEnd(new char[] {(char)0 });
+                                path = Path.Combine(path, fName);
+                                
+                                using (FileStream fs = new FileStream(path, FileMode.Create, FileAccess.Write))
+                                {
+                                    fs.Write(fileData, 0, fileData.Length);                                    
                                 }
 
 
-                                privateBox.AppendText("Принят файл: " + sfd.FileName + Environment.NewLine);
+                                privateBox.AppendText("Принят файл: " + path + Environment.NewLine);
                             }
                             break;
                     }
@@ -273,6 +293,7 @@ namespace Turnover
                 }
                 finally
                 {
+                    socket.Shutdown(SocketShutdown.Both);
                     socket.Disconnect(false);
                     socket.Close();
                 }
@@ -421,20 +442,35 @@ namespace Turnover
                 OpenFileDialog ofd = new OpenFileDialog();
                 if (ofd.ShowDialog() != System.Windows.Forms.DialogResult.OK) return;
 
+                byte[] temp = Packet.encoding.GetBytes(ofd.SafeFileName);
+                byte[] fileName = new byte[MAX_PATH];
+
+                if (temp.Length > MAX_PATH)
+                {
+                    MessageBox.Show("Слишком длинное имя файла");
+                    return;
+                }
+                Array.Copy(temp, fileName, temp.Length);
+
                 ListViewItem lvi = usersOnline.SelectedItems[0];
                 Packet packet = lvi.Tag as Packet;
                 string userIP = lvi.Name.Substring(4);
                 TabPage privatePage = GetPage(userIP);
                 chatTabs.SelectTab(privatePage);
 
-                byte []fileBytes = File.ReadAllBytes(ofd.FileName);
+                byte[] fileBytes = File.ReadAllBytes(ofd.FileName);
+                byte[] data = new byte[MAX_PATH + fileBytes.Length];
+
+
+                Buffer.BlockCopy(fileName, 0, data, 0, MAX_PATH);
+                Buffer.BlockCopy(fileBytes, 0, data, MAX_PATH, fileBytes.Length);
 
                 try
                 {
                     using (Socket sc = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp))
                     {
                         sc.Connect(new IPEndPoint(packet.from.Address, packet.privatePort));
-                        Packet p = new Packet(MSG_TYPE.FILE, fileBytes, Properties.Settings.Default.NickName, Properties.Settings.Default.privatePort);
+                        Packet p = new Packet(MSG_TYPE.FILE, data, Properties.Settings.Default.NickName, Properties.Settings.Default.privatePort);
                         globalServer.SendPrivateMessage(sc, p);
                     }
                 }
@@ -477,6 +513,14 @@ namespace Turnover
             }
         }
         #endregion
+
+        private void chatTabs_DoubleClick(object sender, EventArgs e)
+        {
+            if (chatTabs.SelectedIndex != 0)
+            {
+                chatTabs.SelectedTab.Dispose();
+            }            
+        }
 
     }
 }
