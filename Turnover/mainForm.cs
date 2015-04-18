@@ -141,17 +141,17 @@ namespace Turnover
                         case MSG_TYPE.MESSAGE:
                             {
                                 TabPage page = GetPage(userIP);
-                                TextBox privateBox = page.Controls["privateBox_" + userIP] as TextBox;
+                                LogBox privateBox = page.Controls["privateBox_" + userIP] as LogBox;
 
                                 string formatted_data = string.Format("[{0}][{1}][{2}] ", p.from.Address, DateTime.Now, p.NickName) + Environment.NewLine
                                 + Packet.encoding.GetString(p.data) + Environment.NewLine;
-                                privateBox.AppendText(formatted_data);
+                                privateBox.Append(formatted_data);
                             }
                             break;
                         case MSG_TYPE.FILE:
                             {
                                 TabPage page = GetPage(userIP);
-                                TextBox privateBox = page.Controls["privateBox_" + userIP] as TextBox;
+                                LogBox privateBox = page.Controls["privateBox_" + userIP] as LogBox;
 
                                 byte[] fileName = new byte[MAX_PATH];
                                 byte[] fileData = new byte[p.data.Length - MAX_PATH];
@@ -175,8 +175,7 @@ namespace Turnover
                                     Directory.CreateDirectory(path);
                                 }
 
-                                /*SaveFileDialog sfd = new SaveFileDialog();
-                                if(sfd.ShowDialog() != System.Windows.Forms.DialogResult.OK) return;*/
+
                                 string fName = Packet.encoding.GetString(fileName).TrimEnd(new char[] {(char)0 });
                                 path = Path.Combine(path, fName);
                                 
@@ -186,7 +185,7 @@ namespace Turnover
                                 }
 
 
-                                privateBox.AppendText("Принят файл: " + path + Environment.NewLine);
+                                privateBox.Append("Принят файл: " + path + Environment.NewLine);
                             }
                             break;
                     }
@@ -211,9 +210,8 @@ namespace Turnover
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show("Client disconnected: " + ex.Message);
-                }
-                
+                    Console.WriteLine("client_Disconnected event: " + ex.Message);
+                }                
             });
         }
 
@@ -258,7 +256,7 @@ namespace Turnover
                 // Иначе отправляем сообщение указанному пользователю
                 TabPage selectedPage = chatTabs.SelectedTab;
                 string userIP = selectedPage.Name.Substring(12);
-                TextBox privateBox = selectedPage.Controls["privateBox_" + userIP] as TextBox;
+                LogBox privateBox = selectedPage.Controls["privateBox_" + userIP] as LogBox;
                 ListViewItem lvi = FindListItem(usersOnline, userIP);
                 if(lvi == null)
                 {
@@ -276,7 +274,7 @@ namespace Turnover
                     {
                         string formatted_data = string.Format("[{0}][{1}][{2}] ", "0"/*packet.from.Address*/, DateTime.Now, packet.NickName) + Environment.NewLine
                             + Packet.encoding.GetString(packet.data) + Environment.NewLine;
-                        privateBox.AppendText(formatted_data);
+                        privateBox.Append(formatted_data);
 
                         globalServer.SendPrivateMessage(socket, packet);
                         msgBox.Clear();
@@ -313,16 +311,11 @@ namespace Turnover
             privatePage = new TabPage(userName);
             privatePage.Name = "privatePage_" + userIP;
 
-            TextBox privateBox = new TextBox();
-            privateBox.Name = "privateBox_" + userIP;
-            privateBox.Multiline = true;
-            privateBox.ReadOnly = true;
-            privateBox.BackColor = Color.White;
-            privateBox.Location = new Point(6, 7);
-            privateBox.ScrollBars = ScrollBars.Vertical;
+            LogBox privateBox = new LogBox(userIP);
+            privateBox.Location = new Point(7, 7);
             privateBox.Size = new System.Drawing.Size(555, 365);
-            privatePage.Controls.Add(privateBox);
 
+            privatePage.Controls.Add(privateBox);
             chatTabs.TabPages.Add(privatePage);
 
             return privatePage;
@@ -470,6 +463,7 @@ namespace Turnover
                     using (Socket sc = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp))
                     {
                         sc.Connect(new IPEndPoint(packet.from.Address, packet.privatePort));
+                        //MessageBox.Show(data.Length.ToString());
                         Packet p = new Packet(MSG_TYPE.FILE, data, Properties.Settings.Default.NickName, Properties.Settings.Default.privatePort);
                         globalServer.SendPrivateMessage(sc, p);
                     }

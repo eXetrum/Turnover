@@ -16,17 +16,6 @@ namespace Turnover
         [STAThread]
         static void Main()
         {
-            /*
-            bool createdNew;
-            Mutex m = new Mutex(true, "Turnover", out createdNew);
-            if (!createdNew)
-            {
-                // myApp is already running...
-                MessageBox.Show("myApp is already running!", "Multiple Instances");
-                Application.Exit();
-                return;
-            }*/
-
             if (mutex.WaitOne(TimeSpan.Zero, true))
             {
                 Application.EnableVisualStyles();
@@ -37,11 +26,7 @@ namespace Turnover
             else
             {
                 MessageBox.Show("Only one instance at a time");
-            }
-
-
-
-            
+            }                        
         }
     }
 }

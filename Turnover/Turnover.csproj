@@ -50,6 +50,9 @@
   <ItemGroup>
     <Compile Include="Client.cs" />
     <Compile Include="GlobalServer.cs" />
+    <Compile Include="LogBox.cs">
+      <SubType>Component</SubType>
+    </Compile>
     <Compile Include="mainForm.cs">
       <SubType>Form</SubType>
     </Compile>

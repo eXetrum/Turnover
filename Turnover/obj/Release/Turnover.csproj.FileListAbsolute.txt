@@ -6,4 +6,3 @@ D:\users\lumenignis\documents\visual studio 2012\Projects\Turnover\Turnover\obj\
 D:\users\lumenignis\documents\visual studio 2012\Projects\Turnover\Turnover\obj\Release\Turnover.csproj.GenerateResource.Cache
 D:\users\lumenignis\documents\visual studio 2012\Projects\Turnover\Turnover\obj\Release\Turnover.exe
 D:\users\lumenignis\documents\visual studio 2012\Projects\Turnover\Turnover\obj\Release\Turnover.pdb
-D:\users\lumenignis\documents\visual studio 2012\Projects\Turnover\Turnover\obj\Release\Turnover.csprojResolveAssemblyReference.cache

@@ -91,7 +91,6 @@ namespace Turnover
             inviteEvent.Set();
             inviteThread.Join();
 
-            //udpSender.DropMulticastGroup(multicastAddress);
             udpSender.Close();
 
             privateListener.Stop();
@@ -121,7 +120,8 @@ namespace Turnover
         public void SendPrivateMessage(Socket remote, Packet packet)
         {
             Byte[] encrypted = new Security().Encrypt(Packet.ObjectToByteArray(packet));
-            remote.Send(encrypted);
+            remote.Send(BitConverter.GetBytes(encrypted.Length), 0, 4, SocketFlags.None);
+            remote.Send(encrypted, 0, encrypted.Length, SocketFlags.None);
         }
 
         private void acceptedPMCallback(IAsyncResult ar)
@@ -140,7 +140,7 @@ namespace Turnover
             { return; }
             catch (Exception ex)
             {
-                MessageBox.Show("SERVER AcceptPMcallback: " + ex.Message);
+                Console.WriteLine("SERVER AcceptPMcallback: " + ex.Message);
             }
         }    
 
@@ -192,10 +192,8 @@ namespace Turnover
             }
             catch (Exception ex)
             {
-                MessageBox.Show("SERVER ReceiveCallback: " + ex.Message);
+                Console.WriteLine("SERVER ReceiveCallback: " + ex.Message);
             }
-        }
-
-        
+        }        
     }
 }

@@ -29,13 +29,12 @@ namespace Turnover
 
         public IPEndPoint from { get; set; }
 
-        public Packet(MSG_TYPE msgType, byte[] data, string NickName, int privatePort/*IPEndPoint privateIPEndPoint*/)
+        public Packet(MSG_TYPE msgType, byte[] data, string NickName, int privatePort)
         {
             this.msgType = msgType;
             this.data = data;
             this.NickName = NickName;
             this.privatePort = privatePort;
-            //this.privateIPEndPoint = privateIPEndPoint;
         }
 
         #region Convert Packet to bytes <=> bytes to Packet
