@@ -1,9 +1,0 @@
-D:\users\lumenignis\documents\visual studio 2012\Projects\Turnover\Turnover\bin\Debug\Turnover.exe.config
-D:\users\lumenignis\documents\visual studio 2012\Projects\Turnover\Turnover\bin\Debug\Turnover.exe
-D:\users\lumenignis\documents\visual studio 2012\Projects\Turnover\Turnover\bin\Debug\Turnover.pdb
-D:\users\lumenignis\documents\visual studio 2012\Projects\Turnover\Turnover\obj\Debug\Turnover.csprojResolveAssemblyReference.cache
-D:\users\lumenignis\documents\visual studio 2012\Projects\Turnover\Turnover\obj\Debug\Turnover.mainForm.resources
-D:\users\lumenignis\documents\visual studio 2012\Projects\Turnover\Turnover\obj\Debug\Turnover.Properties.Resources.resources
-D:\users\lumenignis\documents\visual studio 2012\Projects\Turnover\Turnover\obj\Debug\Turnover.csproj.GenerateResource.Cache
-D:\users\lumenignis\documents\visual studio 2012\Projects\Turnover\Turnover\obj\Debug\Turnover.exe
-D:\users\lumenignis\documents\visual studio 2012\Projects\Turnover\Turnover\obj\Debug\Turnover.pdb
